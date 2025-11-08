@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 
 class AdmloginScreen extends StatefulWidget {
   const AdmloginScreen({super.key});
@@ -35,10 +36,10 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
       });
 
       if (mounted) {
-        // Navigation.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
-        // );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
