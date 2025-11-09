@@ -2,6 +2,7 @@ import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
+import 'package:setor_mobil_admin/pages/order_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -12,7 +13,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String _selectedPeriod = 'today';
-  int _selectedBottomIndex = 0;
+  int _selectedBottomNavIndex = 0;
 
   final List<Map<String, dynamic>> _stats = [
     {
@@ -71,7 +72,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'id': 'ORD-004',
       'customer': 'Alice Brown',
       'vehicle': 'Yamaha NMAX',
-      'status': 'Active',
+      'status': 'Cancelled',
       'amount': 'Rp 285.000',
     },
   ];
@@ -435,6 +436,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           final isActive = status == 'Active';
           final isCompleted = status == 'Completed';
           final isPending = status == 'Pending';
+          final isCancelled = status == 'Cancelled';
 
           Color bgColor;
           Color textColor;
@@ -448,6 +450,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             bgColor = Colors.blue.shade100;
             textColor = Colors.blue.shade700;
             label = 'Completed';
+          } else if (isCancelled) {
+            bgColor = Colors.red.shade100;
+            textColor = Colors.red.shade700;
+            label = 'Cancelled';
           } else {
             bgColor = Colors.green.shade100;
             textColor = Colors.green.shade700;
@@ -646,9 +652,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildNavItem(IconData icon, String label, int index) {
-    final isSelected = _selectedBottomIndex == index;
+    final isSelected = _selectedBottomNavIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedBottomIndex = index),
+      onTap: () {
+        setState(() {
+          _selectedBottomNavIndex = index;
+
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => OrderManagementScreen()),
+            );
+          }
+        });
+      },
+
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
