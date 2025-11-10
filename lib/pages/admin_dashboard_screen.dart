@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
 import 'package:setor_mobil_admin/pages/order_management_screen.dart';
+import 'package:setor_mobil_admin/pages/vehicle_management.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -662,6 +663,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => OrderManagementScreen()),
+            );
+          }
+
+          if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => VehicleManagementScreen()),
             );
           }
         });

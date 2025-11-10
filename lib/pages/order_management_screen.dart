@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
+import 'package:setor_mobil_admin/pages/vehicle_management.dart';
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -704,6 +705,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+            );
+          }
+
+          if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => VehicleManagementScreen()),
             );
           }
         });
