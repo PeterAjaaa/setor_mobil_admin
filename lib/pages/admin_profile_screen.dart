@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
+import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 import 'package:setor_mobil_admin/pages/order_management_screen.dart';
 import 'package:setor_mobil_admin/pages/vehicle_management.dart';
 
@@ -484,7 +485,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           if (index == 0) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AdmloginScreen()),
+              MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
             );
           }
 

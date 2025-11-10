@@ -20,7 +20,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final List<Map<String, dynamic>> _stats = [
     {
       'label': 'Total Vehicles',
-      'value': '156',
+      'value': '10',
       'icon': Icons.directions_car,
       'color': Colors.blue,
       'change': '+12',
@@ -144,7 +144,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildRecentOrders(),
                     SizedBox(height: 24),
 
-                    _buildQuickActions(),
                     SizedBox(height: 80),
                   ],
                 ),
@@ -538,42 +537,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           );
         }).toList(),
-      ],
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A1A),
-          ),
-        ),
-        SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickActionButton(
-                'Add\nVehicle',
-                Icons.directions_car,
-                [Colors.blue, Colors.blue.shade600],
-                () {},
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: _buildQuickActionButton('View\nUsers', Icons.people, [
-                Colors.purple,
-                Colors.purple.shade600,
-              ], () {}),
-            ),
-          ],
-        ),
       ],
     );
   }

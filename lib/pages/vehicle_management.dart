@@ -472,7 +472,7 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
                           ),
                         ),
                         Text(
-                          ' (${vehicle['orders']})',
+                          ' (${vehicle['order']})',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[600],
