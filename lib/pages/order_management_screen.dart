@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
+import 'package:setor_mobil_admin/pages/admin_profile_screen.dart';
 import 'package:setor_mobil_admin/pages/vehicle_management.dart';
 
 class OrderManagementScreen extends StatefulWidget {
@@ -686,7 +687,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               _buildNavItem(Icons.dashboard, 'Dashboard', 0),
               _buildNavItem(Icons.shopping_bag, 'Orders', 1),
               _buildNavItem(Icons.directions_car, 'Vehicles', 2),
-              _buildNavItem(Icons.people, 'Users', 3),
+              _buildNavItem(Icons.people, 'Profile', 3),
             ],
           ),
         ),
@@ -712,6 +713,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => VehicleManagementScreen()),
+            );
+          }
+          
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AdminProfileScreen()),
             );
           }
         });

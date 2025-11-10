@@ -2,6 +2,7 @@ import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
+import 'package:setor_mobil_admin/pages/admin_profile_screen.dart';
 import 'package:setor_mobil_admin/pages/order_management_screen.dart';
 import 'package:setor_mobil_admin/pages/vehicle_management.dart';
 
@@ -644,7 +645,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _buildNavItem(Icons.dashboard, 'Dashboard', 0),
               _buildNavItem(Icons.shopping_bag, 'Orders', 1),
               _buildNavItem(Icons.directions_car, 'Vehicles', 2),
-              _buildNavItem(Icons.people, 'Users', 3),
+              _buildNavItem(Icons.people, 'Profile', 3),
             ],
           ),
         ),
@@ -670,6 +671,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => VehicleManagementScreen()),
+            );
+          }
+
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AdminProfileScreen()),
             );
           }
         });
