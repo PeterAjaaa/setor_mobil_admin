@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_profile_screen.dart';
 import 'package:setor_mobil_admin/pages/vehicle_management.dart';
@@ -11,56 +15,18 @@ class OrderManagementScreen extends StatefulWidget {
 }
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
-  String _selectedFilter = 'all';
+  final _secureStorage = FlutterSecureStorage();
+  String _selectedFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
   int _selectedBottomNavIndex = 1;
+  List<Map<String, dynamic>> _orders = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _orders = [
-    {
-      'id': '0RD-001',
-      'customer': 'John Doe',
-      'vehicle': 'Honda Beat',
-      'type': 'Motorcycle',
-      'status': 'Active',
-      'startDate': 'Nov 15 2025',
-      'endDate': 'Nov 17 2025',
-      'amount': 'Rp 165.000',
-      'phone': '081234567890',
-    },
-    {
-      'id': '0RD-002',
-      'customer': 'Jane Smith',
-      'vehicle': 'Toyota Avanza',
-      'type': 'Car',
-      'status': 'Pending',
-      'startDate': 'Nov 20 2025',
-      'endDate': 'Nov 22 2025',
-      'amount': 'Rp 915.000',
-      'phone': '081234567890',
-    },
-    {
-      'id': '0RD-003',
-      'customer': 'Bob Johnson',
-      'vehicle': 'Yamaha NMAX',
-      'type': 'Motorcycle',
-      'status': 'Completed',
-      'startDate': 'Nov 10 2025',
-      'endDate': 'Nov 12 2025',
-      'amount': 'Rp 285.000',
-      'phone': '081234567890',
-    },
-    {
-      'id': '0RD-004',
-      'customer': 'Alice Brown',
-      'vehicle': 'Yamaha NMAX',
-      'type': 'Motorcycle',
-      'status': 'Cancelled',
-      'startDate': 'Nov 10 2025',
-      'endDate': 'Nox 12 2025',
-      'amount': 'Rp 285.000',
-      'phone': '081234567890',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrders();
+  }
 
   @override
   void dispose() {
@@ -68,21 +34,99 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     super.dispose();
   }
 
+  Future<void> _fetchOrders() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final token = await _secureStorage.read(key: 'jwt_token');
+
+      if (token == null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => AdmloginScreen()),
+          );
+        }
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('https://api.intracrania.com/orders'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['data'] != null) {
+          setState(() {
+            _orders = List<Map<String, dynamic>>.from(data['data']);
+            _isLoading = false;
+          });
+        }
+      } else if (response.statusCode == 401) {
+        _handleUnauthorized();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to fetch orders'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error. Please check your connection.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleUnauthorized() async {
+    await _secureStorage.delete(key: 'jwt_token');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Session expired. Please login again.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => AdmloginScreen()),
+      );
+    }
+  }
+
   List<Map<String, dynamic>> get _filteredOrders {
     var filtered = _orders;
 
-    if (_selectedFilter != 'all') {
+    if (_selectedFilter != 'All') {
       filtered = filtered.where((o) => o['status'] == _selectedFilter).toList();
     }
 
-    if (_searchController.text.isEmpty) {
+    if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
       filtered = filtered
-          .where(
-            (o) =>
-                o['id'].toString().toLowerCase().contains(query) ||
-                o['customer'].toString().toLowerCase().contains(query),
-          )
+          .where((o) => o['id'].toString().toLowerCase().contains(query))
           .toList();
     }
 
@@ -104,21 +148,60 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
   }
 
+  String _formatPrice(int price) {
+    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   void _handleViewDetail(Map<String, dynamic> order) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Detail ${order['id']}'),
+        title: Text('Order #${order['id']}'),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Customer: ${order['customer']}'),
-              Text('Phone: ${order['phone']}'),
-              Text('Vehicle: ${order['vehicle']}'),
-              Text('Status: ${_getStatusConfig(order['status'])['label']}'),
-              Text('Amount: ${order['amount']}'),
+              Text('Order ID: ${order['id']}'),
+              SizedBox(height: 8),
+              Text('User ID: ${order['user_id']}'),
+              SizedBox(height: 8),
+              Text(
+                'Vehicle: ${order['car_id'] != null ? 'Car #${order['car_id']}' : 'Motorcycle #${order['motorcycle_id']}'}',
+              ),
+              SizedBox(height: 8),
+              Text('Duration: ${order['duration']} days'),
+              SizedBox(height: 8),
+              Text('Start: ${_formatDate(order['start_date'])}'),
+              SizedBox(height: 8),
+              Text('Return: ${_formatDate(order['return_date'])}'),
+              SizedBox(height: 8),
+              Text('Price: ${_formatPrice(order['price'])}'),
+              SizedBox(height: 8),
+              Text('Status: ${order['status']}'),
             ],
           ),
         ),
@@ -133,12 +216,63 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
+  Future<void> _updateOrderStatus(int orderId, String newStatus) async {
+    try {
+      final token = await _secureStorage.read(key: 'jwt_token');
+
+      if (token == null) {
+        _handleUnauthorized();
+        return;
+      }
+
+      final response = await http.put(
+        Uri.parse('https://api.intracrania.com/orders/$orderId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'status': newStatus}),
+      );
+
+      if (response.statusCode == 200) {
+        await _fetchOrders();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Order #$orderId updated to $newStatus'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else if (response.statusCode == 401) {
+        _handleUnauthorized();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update order'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _handleApproveOrder(Map<String, dynamic> order) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Approve Order'),
-        content: Text('Are you sure you want to approve order ${order['id']}?'),
+        content: Text(
+          'Are you sure you want to approve order #${order['id']}?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
@@ -148,13 +282,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              setState(() {
-                final index = _orders.indexWhere((o) => o['id'] == order['id']);
-                _orders[index]['status'] = 'Active';
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Order ${order['id']} approved.')),
-              );
+              _updateOrderStatus(order['id'], 'Active');
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             child: Text('Approve'),
@@ -169,7 +297,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Reject Order'),
-        content: Text('Are you sure you want to reject order ${order['id']}?'),
+        content: Text('Are you sure you want to reject order #${order['id']}?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
@@ -179,13 +307,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              setState(() {
-                final index = _orders.indexWhere((o) => o['id'] == order['id']);
-                _orders[index]['status'] = 'Cancelled';
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Order ${order['id']} rejected.')),
-              );
+              _updateOrderStatus(order['id'], 'Cancelled');
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Reject'),
@@ -195,41 +317,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
-  void _handleCompleteOrder(Map<String, dynamic> order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Complete Order'),
-        content: Text(
-          'Are you sure you want to complete order ${order['id']}?',
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                final index = _orders.indexWhere((o) => o['id'] == order['id']);
-                _orders[index]['status'] = 'Completed';
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Order ${order['id']} completed.')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: Text('Complete'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final allCount = _orders.length;
     final activeCount = _orders.where((o) => o['status'] == 'Active').length;
     final pendingCount = _orders.where((o) => o['status'] == 'Pending').length;
     final completedCount = _orders
@@ -242,7 +332,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF059669), Color(0xFF0D9488)],
@@ -267,7 +357,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          '${_orders.length} Orders Total',
+                          '$allCount Orders Total',
                           style: TextStyle(
                             fontSize: 13,
                             color: Color(0xFFD1FAE5),
@@ -276,14 +366,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                       ],
                     ),
                   ),
-
                   SizedBox(height: 16),
-
                   TextField(
                     controller: _searchController,
                     onChanged: (value) => setState(() {}),
                     decoration: InputDecoration(
-                      hintText: 'Search ID or customer name...',
+                      hintText: 'Search by Order ID...',
                       hintStyle: TextStyle(
                         color: Colors.grey[400],
                         fontSize: 14,
@@ -302,26 +390,23 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                       contentPadding: EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-
                   SizedBox(height: 12),
-
                   Row(
                     children: [
-                      _buildStatMini('${_orders.length}', 'All Orders'),
+                      _buildStatMini('$allCount', 'All'),
                       SizedBox(width: 8),
                       _buildStatMini('$activeCount', 'Active'),
                       SizedBox(width: 8),
                       _buildStatMini('$pendingCount', 'Pending'),
                       SizedBox(width: 8),
-                      _buildStatMini('$completedCount', 'Completed'),
+                      _buildStatMini('$completedCount', 'Done'),
                     ],
                   ),
                 ],
               ),
             ),
-
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(
@@ -332,29 +417,63 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildFilterButton('all', 'All'),
+                    _buildFilterButton('All'),
                     SizedBox(width: 8),
-                    _buildFilterButton('active', 'Active'),
+                    _buildFilterButton('Active'),
                     SizedBox(width: 8),
-                    _buildFilterButton('pending', 'Pending'),
+                    _buildFilterButton('Pending'),
                     SizedBox(width: 8),
-                    _buildFilterButton('completed', 'Completed'),
+                    _buildFilterButton('Completed'),
                     SizedBox(width: 8),
-                    _buildFilterButton('cancelled', 'Cancelled'),
+                    _buildFilterButton('Cancelled'),
                   ],
                 ),
               ),
             ),
-
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.all(20),
-                itemCount: _filteredOrders.length,
-                itemBuilder: (context, index) {
-                  final order = _filteredOrders[index];
-                  return _buildOrderCard(order);
-                },
-              ),
+              child: _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF059669),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: Color(0xFF059669),
+                      onRefresh: _fetchOrders,
+                      child: _filteredOrders.isEmpty
+                          ? ListView(
+                              children: [
+                                SizedBox(height: 100),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.inbox_outlined,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        'No orders found',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.all(16),
+                              itemCount: _filteredOrders.length,
+                              itemBuilder: (context, index) {
+                                final order = _filteredOrders[index];
+                                return _buildOrderCard(order);
+                              },
+                            ),
+                    ),
             ),
           ],
         ),
@@ -376,7 +495,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             Text(
               value,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -384,7 +503,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(fontSize: 10, color: Color(0xFFD1FAE5)),
+              style: TextStyle(fontSize: 9, color: Color(0xFFD1FAE5)),
             ),
           ],
         ),
@@ -392,14 +511,15 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
-  Widget _buildFilterButton(String filter, String label) {
-    final isSelected = _selectedFilter == filter;
+  Widget _buildFilterButton(String label) {
+    final isSelected = _selectedFilter == label;
     return ElevatedButton(
-      onPressed: () => setState(() => _selectedFilter = filter),
+      onPressed: () => setState(() => _selectedFilter = label),
       style: ElevatedButton.styleFrom(
         backgroundColor: isSelected ? Color(0xFF059669) : Colors.grey[100],
         foregroundColor: isSelected ? Colors.white : Colors.grey[600],
         elevation: 0,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Text(
@@ -411,10 +531,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final statusConfig = _getStatusConfig(order['status']);
+    final isVehicleCar = order['car_id'] != null;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.grey[200]!, width: 2),
@@ -433,7 +554,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                order['id'],
+                'Order #${order['id']}',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -449,7 +570,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 child: Text(
                   statusConfig['label'],
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: statusConfig['color'],
                   ),
@@ -457,47 +578,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               ),
             ],
           ),
-
           SizedBox(height: 12),
-
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Color(0xFF059669).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.person, size: 18, color: Color(0xFF059669)),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order['customer'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                    ),
-                    Text(
-                      order['phone'],
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 8),
-
           Container(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.grey[50],
               borderRadius: BorderRadius.circular(8),
@@ -505,72 +588,70 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             child: Row(
               children: [
                 Icon(
-                  order['type'] == 'Motorcycle'
-                      ? Icons.motorcycle
-                      : Icons.directions_car,
+                  isVehicleCar ? Icons.directions_car : Icons.motorcycle,
                   size: 24,
                   color: Color(0xFF059669),
                 ),
-                SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order['vehicle'],
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isVehicleCar
+                            ? 'Car #${order['car_id']}'
+                            : 'Motorcycle #${order['motorcycle_id']}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Text(
-                      order['type'],
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
-                  ],
+                      Text(
+                        '${order['duration']} days rental',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-
-          SizedBox(height: 12),
-
+          SizedBox(height: 10),
           Container(
-            padding: EdgeInsets.all(12),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Column(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.calendar_today, size: 12, color: Colors.blue),
+                    Text(
+                      'Start: ${_formatDate(order['start_date'])}',
+                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Return: ${_formatDate(order['return_date'])}',
+                      style: TextStyle(fontSize: 10, color: Colors.grey[700]),
+                    ),
                   ],
                 ),
-                SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total:',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    ),
-                    Text(
-                      'Rp ${order['amount'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF059669),
-                      ),
-                    ),
-                  ],
+                Text(
+                  _formatPrice(order['price']),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF059669),
+                  ),
                 ),
               ],
             ),
           ),
-
           SizedBox(height: 12),
-
           _buildActions(order),
         ],
       ),
@@ -609,22 +690,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
           ),
         ],
       );
-    } else if (order['status'] == 'Active') {
-      return Row(
-        children: [
-          Expanded(
-            child: _buildActionButton(
-              'Detail',
-              Icons.visibility_outlined,
-              Colors.purple,
-              () => _handleCompleteOrder(order),
-            ),
-          ),
-        ],
-      );
     } else {
       return _buildActionButton(
-        'Detail',
+        'View Detail',
         Icons.visibility_outlined,
         Colors.blue,
         () => _handleViewDetail(order),
@@ -653,7 +721,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
@@ -665,7 +733,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
-   Widget _buildBottomNav() {
+  Widget _buildBottomNav() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -680,14 +748,14 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(Icons.dashboard, 'Dashboard', 0),
               _buildNavItem(Icons.shopping_bag, 'Orders', 1),
               _buildNavItem(Icons.directions_car, 'Vehicles', 2),
-              _buildNavItem(Icons.people, 'Profile', 3),
+              _buildNavItem(Icons.person, 'Profile', 3),
             ],
           ),
         ),
@@ -697,52 +765,55 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _selectedBottomNavIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedBottomNavIndex = index;
-
+    return Flexible(
+      child: GestureDetector(
+        onTap: () {
           if (index == 0) {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
             );
-          }
-
-          if (index == 2) {
-            Navigator.push(
+          } else if (index == 2) {
+            Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => VehicleManagementScreen()),
+              MaterialPageRoute(
+                builder: (context) => VehicleManagementScreen(),
+              ),
             );
-          }
-          
-          if (index == 3) {
-            Navigator.push(
+          } else if (index == 3) {
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => AdminProfileScreen()),
             );
           }
-        });
-      },
-
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isSelected ? Color(0xFF059669) : Colors.grey[400],
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: isSelected ? Color(0xFF059669) : Colors.grey[400],
+              ),
+              SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isSelected ? Color(0xFF059669) : Colors.grey[400],
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isSelected ? Color(0xFF059669) : Colors.grey[400],
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
