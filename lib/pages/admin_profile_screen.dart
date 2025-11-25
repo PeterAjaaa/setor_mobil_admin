@@ -115,11 +115,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
   }
 
-  void _handleMenuTap(String menu) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$menu coming soon!')));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +154,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     border: Border.all(color: Colors.grey[200]!, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 20,
                         offset: Offset(0, 2),
                       ),
@@ -180,7 +175,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withValues(alpha: 0.3),
                                   blurRadius: 12,
                                   offset: Offset(0, 4),
                                 ),
@@ -360,7 +355,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 20),
@@ -416,7 +411,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -452,7 +447,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         border: Border(top: BorderSide(color: Colors.grey[200]!, width: 2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, -5),
           ),

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 
 class AdmloginScreen extends StatefulWidget {
@@ -12,8 +15,8 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _secureStorage = FlutterSecureStorage();
   bool _obscurePassword = true;
-  bool _rememberMe = false;
   bool _isLoading = false;
 
   @override
@@ -29,24 +32,114 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
         _isLoading = true;
       });
 
-      await Future.delayed(Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+      try {
+        final response = await http.post(
+          Uri.parse('https://api.intracrania.com/login/admin'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': _emailController.text.trim(),
+            'password': _passwordController.text,
+          }),
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login successful!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+
+          // Save JWT token to secure storage and wait for completion
+          // Token is nested inside 'data' object
+          if (responseData['data'] != null &&
+              responseData['data']['token'] != null) {
+            final token = responseData['data']['token'];
+
+            await _secureStorage.write(key: 'jwt_token', value: token);
+
+            // Verify token was saved
+            final savedToken = await _secureStorage.read(key: 'jwt_token');
+
+            if (savedToken != null) {
+              setState(() {
+                _isLoading = false;
+              });
+
+              // Login successful - navigate to dashboard
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AdminDashboardScreen(),
+                  ),
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Login successful!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            } else {
+              // Token failed to save
+              setState(() {
+                _isLoading = false;
+              });
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to save session. Please try again.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } else {
+            // No token in response
+            setState(() {
+              _isLoading = false;
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Login response invalid. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } else {
+          // Login failed
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (mounted) {
+            final errorMessage = response.statusCode == 401
+                ? 'Invalid email or password'
+                : 'Login failed. Please try again.';
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Network error. Please check your connection.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -55,10 +148,6 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Forgot password functionality not implemented.')),
     );
-  }
-
-  void _navigateToUserLogin() {
-    Navigator.pop(context);
   }
 
   @override
@@ -74,7 +163,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 20,
                     offset: Offset(0, 10),
                   ),
@@ -101,11 +190,11 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 10,
                                 offset: Offset(0, 4),
                               ),
@@ -132,7 +221,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                           'Setor Management System',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
                       ],
@@ -255,7 +344,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please enter your email';
+                                    return 'Email is required';
                                   }
                                   if (!value.contains('@')) {
                                     return 'Please enter a valid email';
@@ -335,10 +424,10 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please enter your password';
+                                    return 'Password is required';
                                   }
-                                  if (value.length < 6) {
-                                    return 'Password must be at least 6 characters';
+                                  if (value.length < 8) {
+                                    return 'Password must be at least 8 characters';
                                   }
                                   return null;
                                 },
@@ -349,31 +438,8 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                           SizedBox(height: 16),
 
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Checkbox(
-                                      value: _rememberMe,
-                                      onChanged: (value) {
-                                        setState(() => _rememberMe = value!);
-                                      },
-                                      activeColor: Color(0xFF059669),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        'Remember me',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Color(0xFF1A1A1A),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                               TextButton(
                                 onPressed: _handleForgotPassword,
                                 child: Text(
@@ -381,7 +447,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Color(0xFF059669),
-                                    fontWeight: FontWeight.w600
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -398,33 +464,35 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                                 backgroundColor: Color(0xFF059669),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                shadowColor: Color(0xFF059669).withOpacity(0.3),
+                                shadowColor: Color(0xFF059669).withValues(alpha: 0.3),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: _isLoading
                                   ? SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.shield, size: 20),
-                                      Text(
-                                        'Login',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
                                       ),
-                                    ],
-                                  ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.shield, size: 20),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Login',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                             ),
                           ),
 
@@ -434,7 +502,10 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                             padding: EdgeInsets.only(top: 24),
                             decoration: BoxDecoration(
                               border: Border(
-                              top: BorderSide(color: Colors.grey[200]!, width: 2),
+                                top: BorderSide(
+                                  color: Colors.grey[200]!,
+                                  width: 2,
+                                ),
                               ),
                             ),
                             child: Row(
@@ -480,10 +551,10 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                                       children: [
                                         Text(
                                           '100%',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF059669),
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF059669),
                                           ),
                                         ),
                                         SizedBox(height: 4),
@@ -512,7 +583,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                       gradient: LinearGradient(
                         colors: [Colors.grey[50]!, Colors.white],
                         begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter
+                        end: Alignment.bottomCenter,
                       ),
                       border: Border(
                         top: BorderSide(color: Colors.grey[200]!, width: 2),
@@ -545,7 +616,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          '© 2024 SeTor Admin Panel. All rights reserved.',
+                          '© 2025 SeTor Admin Panel. All rights reserved.',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey[600],
