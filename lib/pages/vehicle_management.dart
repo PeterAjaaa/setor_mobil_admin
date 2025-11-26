@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_profile_screen.dart';
 import 'package:setor_mobil_admin/pages/order_management_screen.dart';
@@ -8,7 +7,8 @@ class VehicleManagementScreen extends StatefulWidget {
   const VehicleManagementScreen({super.key});
 
   @override
-  State<VehicleManagementScreen> createState() => _VehicleManagementScreenState();
+  State<VehicleManagementScreen> createState() =>
+      _VehicleManagementScreenState();
 }
 
 class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
@@ -18,94 +18,94 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
 
   final List<Map<String, dynamic>> _vehicles = [
     {
-      'id' : 1,
+      'id': 1,
       'name': 'Honda Beat',
-      'type' : 'Motorcycle',
+      'type': 'Motorcycle',
       'price': '50000',
       'status': 'Available',
       'rating': 4.8,
-      'order': 124
+      'order': 124,
     },
     {
-      'id' : 2,
+      'id': 2,
       'name': 'Yamaha Aerox',
-      'type' : 'Motorcycle',
+      'type': 'Motorcycle',
       'price': '75000',
       'status': 'Rented',
       'rating': 4.9,
-      'order': 89
+      'order': 89,
     },
     {
-      'id' : 3,
+      'id': 3,
       'name': 'Honda Vario',
-      'type' : 'Motorcycle',
+      'type': 'Motorcycle',
       'price': '60000',
       'status': 'Maintenance',
       'rating': 4.7,
-      'order': 156
+      'order': 156,
     },
     {
-      'id' : 4,
+      'id': 4,
       'name': 'Toyota Avanza',
-      'type' : 'Car',
+      'type': 'Car',
       'price': '300000',
       'status': 'Available',
       'rating': 4.8,
-      'order': 78
+      'order': 78,
     },
     {
-      'id' : 5,
+      'id': 5,
       'name': 'Honda Brio',
-      'type' : 'Car',
+      'type': 'Car',
       'price': '250000',
       'status': 'Rented',
       'rating': 4.6,
-      'order': 45
+      'order': 45,
     },
     {
-      'id' : 6,
+      'id': 6,
       'name': 'Daihatsu Xenia',
-      'type' : 'Car',
+      'type': 'Car',
       'price': '200000',
       'status': 'Rented',
       'rating': 4.7,
-      'order': 50
+      'order': 50,
     },
     {
-      'id' : 7,
+      'id': 7,
       'name': 'Suzuki Ertiga',
-      'type' : 'Car',
+      'type': 'Car',
       'price': '320000',
       'status': 'Available',
       'rating': 4.8,
-      'order': 98
+      'order': 98,
     },
     {
-      'id' : 8,
-      'name':'Honda PCX',
-      'type' : 'Motorcycle',
+      'id': 8,
+      'name': 'Honda PCX',
+      'type': 'Motorcycle',
       'price': '85000',
       'status': 'Available',
       'rating': 4.9,
-      'order': 44
+      'order': 44,
     },
     {
-      'id' : 9,
+      'id': 9,
       'name': 'Yamaha NMAX',
-      'type' : 'Motorcycle',
+      'type': 'Motorcycle',
       'price': '90000',
       'status': 'Maintenance',
       'rating': 4.8,
-      'order': 76
+      'order': 76,
     },
     {
-      'id' : 10,
+      'id': 10,
       'name': 'Toyota Innova',
-      'type' : 'Car',
+      'type': 'Car',
       'price': '400000',
       'status': 'Maintenance',
       'rating': 4.8,
-      'order': 114
+      'order': 114,
     },
   ];
 
@@ -123,9 +123,13 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
     }
 
     if (_searchController.text.isNotEmpty) {
-      filtered = filtered.where((v) =>
-        v['name'].toString().toLowerCase().contains(_searchController.text.toLowerCase())
-      ).toList();
+      filtered = filtered
+          .where(
+            (v) => v['name'].toString().toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            ),
+          )
+          .toList();
     }
 
     return filtered;
@@ -150,22 +154,22 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
     );
   }
 
-void _handleViewDetail(Map<String, dynamic> vehicle) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(vehicle['name']),
-      content: Text('Vehicle detail will be displayed here.'),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
-}
+  void _handleViewDetail(Map<String, dynamic> vehicle) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(vehicle['name']),
+        content: Text('Vehicle detail will be displayed here.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _handleEditVehicle(Map<String, dynamic> vehicle) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -175,10 +179,12 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
 
   void _handleDeleteVehicle(Map<String, dynamic> vehicle) {
     showDialog(
-      context: context, 
+      context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete Vehicle'),
-        content: Text('Are you sure you want to delete vehicle ${vehicle['name']}?'),
+        content: Text(
+          'Are you sure you want to delete vehicle ${vehicle['name']}?',
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
@@ -202,9 +208,13 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
 
   @override
   Widget build(BuildContext context) {
-    final availableCount = _vehicles.where((v) => v['status'] == 'Available').length;
+    final availableCount = _vehicles
+        .where((v) => v['status'] == 'Available')
+        .length;
     final rentedCount = _vehicles.where((v) => v['status'] == 'Rented').length;
-    final maintenanceCount = _vehicles.where((v) => v['status'] == 'Maintenance').length;
+    final maintenanceCount = _vehicles
+        .where((v) => v['status'] == 'Maintenance')
+        .length;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -256,9 +266,9 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                              color: Colors.white,
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
+                                color: Colors.white,
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
                               ),
                             ],
                           ),
@@ -268,7 +278,7 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
                             size: 24,
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
 
@@ -279,8 +289,15 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
                     onChanged: (value) => setState(() {}),
                     decoration: InputDecoration(
                       hintText: 'Search by name...',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 20),
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.grey[400],
+                        size: 20,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -295,13 +312,25 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
 
                   Row(
                     children: [
-                      _buildStatMini('${_vehicles.length}', 'Total', Colors.blue),
+                      _buildStatMini(
+                        '${_vehicles.length}',
+                        'Total',
+                        Colors.blue,
+                      ),
                       SizedBox(width: 8),
                       _buildStatMini('$rentedCount', 'Available', Colors.green),
                       SizedBox(width: 8),
-                      _buildStatMini('$maintenanceCount', 'Rented', Colors.orange),
+                      _buildStatMini(
+                        '$maintenanceCount',
+                        'Rented',
+                        Colors.orange,
+                      ),
                       SizedBox(width: 8),
-                      _buildStatMini('$availableCount', 'Maintenance', Colors.red),
+                      _buildStatMini(
+                        '$availableCount',
+                        'Maintenance',
+                        Colors.red,
+                      ),
                     ],
                   ),
                 ],
@@ -312,7 +341,9 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!, width: 2)),
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!, width: 2),
+                ),
               ),
               child: Row(
                 children: [
@@ -326,12 +357,12 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
             ),
 
             Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(20),
-              itemCount: _filteredVehicles.length,
-              itemBuilder: (context, index) {
-                final vehicle = _filteredVehicles[index];
-                return _buildVehicleCard(vehicle);
+              child: ListView.builder(
+                padding: EdgeInsets.all(20),
+                itemCount: _filteredVehicles.length,
+                itemBuilder: (context, index) {
+                  final vehicle = _filteredVehicles[index];
+                  return _buildVehicleCard(vehicle);
                 },
               ),
             ),
@@ -363,10 +394,7 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
             SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 10,
-                color: Color(0xFFD1FAE5),
-              ),
+              style: TextStyle(fontSize: 10, color: Color(0xFFD1FAE5)),
             ),
           ],
         ),
@@ -454,10 +482,7 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
                     ),
                     Text(
                       vehicle['type'],
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     SizedBox(height: 4),
                     Row(
@@ -510,31 +535,25 @@ void _handleViewDetail(Map<String, dynamic> vehicle) {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
-              children:[
+              children: [
                 Text(
                   'Price',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                 ),
                 Spacer(),
-                  Text(
-                    'Rp ${vehicle['price'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF059669),
+                Text(
+                  'Rp ${vehicle['price'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF059669),
                   ),
                 ),
                 Text(
                   ' /day',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[500],
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
-              ], 
+              ],
             ),
           ),
 
