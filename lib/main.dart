@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
+import 'package:setor_mobil_admin/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const AdmloginScreen(),
+      home: const SplashScreen(),
     );
   }
 }
