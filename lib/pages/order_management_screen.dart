@@ -18,7 +18,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   final _secureStorage = FlutterSecureStorage();
   String _selectedFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
-  int _selectedBottomNavIndex = 1;
+  final int _selectedBottomNavIndex = 1;
   List<Map<String, dynamic>> _orders = [];
   bool _isLoading = true;
 
@@ -226,7 +226,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       }
 
       final response = await http.put(
-        Uri.parse('https://api.intracrania.com/orders/$orderId'),
+        Uri.parse('https://api.intracrania.com/orders/update/$orderId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
