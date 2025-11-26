@@ -20,12 +20,14 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
   final int _selectedBottomNavIndex = 1;
   List<Map<String, dynamic>> _orders = [];
+  Map<int, Map<String, dynamic>> _cars = {};
+  Map<int, Map<String, dynamic>> _motorcycles = {};
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchOrders();
+    _fetchAllData();
   }
 
   @override
@@ -34,11 +36,71 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchOrders() async {
+  Future<void> _fetchAllData() async {
     setState(() {
       _isLoading = true;
     });
 
+    await Future.wait([_fetchOrders(), _fetchVehicles()]);
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _fetchVehicles() async {
+    try {
+      final token = await _secureStorage.read(key: 'jwt_token');
+
+      if (token == null) {
+        return;
+      }
+
+      // Fetch cars
+      final carsResponse = await http.get(
+        Uri.parse('https://api.intracrania.com/cars'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (carsResponse.statusCode == 200) {
+        final carsData = jsonDecode(carsResponse.body);
+        if (carsData['data'] != null) {
+          final carsList = List<Map<String, dynamic>>.from(carsData['data']);
+          setState(() {
+            _cars = {for (var car in carsList) car['id']: car};
+          });
+        }
+      }
+
+      // Fetch motorcycles
+      final motorcyclesResponse = await http.get(
+        Uri.parse('https://api.intracrania.com/motorcycles'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (motorcyclesResponse.statusCode == 200) {
+        final motorcyclesData = jsonDecode(motorcyclesResponse.body);
+        if (motorcyclesData['data'] != null) {
+          final motorcyclesList = List<Map<String, dynamic>>.from(
+            motorcyclesData['data'],
+          );
+          setState(() {
+            _motorcycles = {for (var moto in motorcyclesList) moto['id']: moto};
+          });
+        }
+      }
+    } catch (e) {
+      // Silent fail for vehicles, orders will still work
+    }
+  }
+
+  Future<void> _fetchOrders() async {
     try {
       final token = await _secureStorage.read(key: 'jwt_token');
 
@@ -65,15 +127,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         if (data['data'] != null) {
           setState(() {
             _orders = List<Map<String, dynamic>>.from(data['data']);
-            _isLoading = false;
           });
         }
       } else if (response.statusCode == 401) {
         _handleUnauthorized();
       } else {
-        setState(() {
-          _isLoading = false;
-        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -84,9 +142,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -131,6 +186,32 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
 
     return filtered;
+  }
+
+  String _getVehicleName(Map<String, dynamic> order) {
+    if (order['car_id'] != null) {
+      final car = _cars[order['car_id']];
+      if (car != null) {
+        return '${car['brand']} ${car['model']} (${car['year']})';
+      }
+      return 'Car #${order['car_id']}';
+    } else if (order['motorcycle_id'] != null) {
+      final motorcycle = _motorcycles[order['motorcycle_id']];
+      if (motorcycle != null) {
+        return '${motorcycle['brand']} ${motorcycle['model']} (${motorcycle['year']})';
+      }
+      return 'Motorcycle #${order['motorcycle_id']}';
+    }
+    return 'Unknown Vehicle';
+  }
+
+  String _getVehicleType(Map<String, dynamic> order) {
+    if (order['car_id'] != null) {
+      return 'Car';
+    } else if (order['motorcycle_id'] != null) {
+      return 'Motorcycle';
+    }
+    return 'Unknown';
   }
 
   Map<String, dynamic> _getStatusConfig(String status) {
@@ -189,9 +270,9 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               SizedBox(height: 8),
               Text('User ID: ${order['user_id']}'),
               SizedBox(height: 8),
-              Text(
-                'Vehicle: ${order['car_id'] != null ? 'Car #${order['car_id']}' : 'Motorcycle #${order['motorcycle_id']}'}',
-              ),
+              Text('Vehicle: ${_getVehicleName(order)}'),
+              SizedBox(height: 8),
+              Text('Type: ${_getVehicleType(order)}'),
               SizedBox(height: 8),
               Text('Duration: ${order['duration']} days'),
               SizedBox(height: 8),
@@ -235,7 +316,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       );
 
       if (response.statusCode == 200) {
-        await _fetchOrders();
+        await _fetchAllData();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -439,7 +520,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                     )
                   : RefreshIndicator(
                       color: Color(0xFF059669),
-                      onRefresh: _fetchOrders,
+                      onRefresh: _fetchAllData,
                       child: _filteredOrders.isEmpty
                           ? ListView(
                               children: [
@@ -598,13 +679,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isVehicleCar
-                            ? 'Car #${order['car_id']}'
-                            : 'Motorcycle #${order['motorcycle_id']}',
+                        _getVehicleName(order),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '${order['duration']} days rental',
