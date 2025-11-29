@@ -622,52 +622,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 )
               : _buildBarCharts(),
         ),
-
-        SizedBox(height: 16),
-
-        Container(
-          height: 280,
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey[200]!, width: 2),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Data Distribution',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                ),
-              ),
-              SizedBox(height: 16),
-              Expanded(
-                child:
-                    _isLoadingVehicles ||
-                        _isLoadingActiveOrders ||
-                        _isLoadingUsers ||
-                        _isLoadingPendingOrders
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF059669),
-                        ),
-                      )
-                    : _buildPieChart(),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -774,7 +728,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               BarChartRodData(
                 toY: _totalVehicles.toDouble(),
                 gradient: LinearGradient(
-                  colors: [Colors.blue, Colors.blue.withOpacity(0.7)],
+                  colors: [Colors.blue, Colors.blue.withValues(alpha: 0.7)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
@@ -789,7 +743,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               BarChartRodData(
                 toY: _activeOrders.toDouble(),
                 gradient: LinearGradient(
-                  colors: [Colors.green, Colors.green.withOpacity(0.7)],
+                  colors: [Colors.green, Colors.green.withValues(alpha: 0.7)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
@@ -804,7 +758,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               BarChartRodData(
                 toY: _totalUsers.toDouble(),
                 gradient: LinearGradient(
-                  colors: [Colors.purple, Colors.purple.withOpacity(0.7)],
+                  colors: [Colors.purple, Colors.purple.withValues(alpha: 0.7)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
@@ -819,7 +773,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               BarChartRodData(
                 toY: _pendingOrders.toDouble(),
                 gradient: LinearGradient(
-                  colors: [Colors.orange, Colors.orange.withOpacity(0.7)],
+                  colors: [Colors.orange, Colors.orange.withValues(alpha: 0.7)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
@@ -830,135 +784,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPieChart() {
-    final total = _totalVehicles + _activeOrders + _totalUsers + _pendingOrders;
-
-    if (total == 0) {
-      return Center(
-        child: Text(
-          'No data available',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: PieChart(
-            PieChartData(
-              sectionsSpace: 2,
-              centerSpaceRadius: 50,
-              sections: [
-                PieChartSectionData(
-                  color: Colors.blue,
-                  value: _totalVehicles.toDouble(),
-                  title:
-                      '${((_totalVehicles / total) * 100).toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                PieChartSectionData(
-                  color: Colors.green,
-                  value: _activeOrders.toDouble(),
-                  title:
-                      '${((_activeOrders / total) * 100).toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                PieChartSectionData(
-                  color: Colors.purple,
-                  value: _totalUsers.toDouble(),
-                  title: '${((_totalUsers / total) * 100).toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                PieChartSectionData(
-                  color: Colors.orange,
-                  value: _pendingOrders.toDouble(),
-                  title:
-                      '${((_pendingOrders / total) * 100).toStringAsFixed(0)}%',
-                  radius: 60,
-                  titleStyle: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SizedBox(width: 20),
-        Expanded(
-          flex: 2,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildLegendItem('Vehicles', Colors.blue, _totalVehicles),
-              SizedBox(height: 8),
-              _buildLegendItem('Active Orders', Colors.green, _activeOrders),
-              SizedBox(height: 8),
-              _buildLegendItem('Users', Colors.purple, _totalUsers),
-              SizedBox(height: 8),
-              _buildLegendItem('Pending', Colors.orange, _pendingOrders),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color, int value) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                value.toString(),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
