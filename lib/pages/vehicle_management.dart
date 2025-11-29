@@ -452,7 +452,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 8,
                                 offset: Offset(0, 2),
                               ),
@@ -593,7 +593,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -654,7 +654,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -713,8 +713,8 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFF059669).withOpacity(0.2),
-                      Color(0xFF0D9488).withOpacity(0.1),
+                      Color(0xFF059669).withValues(alpha: 0.2),
+                      Color(0xFF0D9488).withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
@@ -841,7 +841,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
     VoidCallback onTap,
   ) {
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -874,7 +874,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
         border: Border(top: BorderSide(color: Colors.grey[200]!, width: 2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, -5),
           ),

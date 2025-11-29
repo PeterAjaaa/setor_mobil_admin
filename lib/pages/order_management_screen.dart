@@ -616,7 +616,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -672,7 +672,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -881,7 +881,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     VoidCallback onTap,
   ) {
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -914,7 +914,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         border: Border(top: BorderSide(color: Colors.grey[200]!, width: 2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, -5),
           ),

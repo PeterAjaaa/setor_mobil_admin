@@ -328,7 +328,7 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
                 ),
                 SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _status,
+                  initialValue: _status,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.info_outline, color: Colors.grey),
                     filled: true,
