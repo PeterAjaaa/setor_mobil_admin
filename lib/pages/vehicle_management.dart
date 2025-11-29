@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_profile_screen.dart';
 import 'package:setor_mobil_admin/pages/order_management_screen.dart';
+import 'package:setor_mobil_admin/pages/add_vehicle_screen.dart';
+import 'package:setor_mobil_admin/pages/edit_vehicle_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class VehicleManagementScreen extends StatefulWidget {
   const VehicleManagementScreen({super.key});
@@ -12,107 +19,133 @@ class VehicleManagementScreen extends StatefulWidget {
 }
 
 class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
+  final _secureStorage = FlutterSecureStorage();
   String _selectedFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
-  int _selectedBottomNavIndex = 2;
+  final int _selectedBottomNavIndex = 2;
+  List<Map<String, dynamic>> _vehicles = [];
+  bool _isLoading = true;
 
-  final List<Map<String, dynamic>> _vehicles = [
-    {
-      'id': 1,
-      'name': 'Honda Beat',
-      'type': 'Motorcycle',
-      'price': '50000',
-      'status': 'Available',
-      'rating': 4.8,
-      'order': 124,
-    },
-    {
-      'id': 2,
-      'name': 'Yamaha Aerox',
-      'type': 'Motorcycle',
-      'price': '75000',
-      'status': 'Rented',
-      'rating': 4.9,
-      'order': 89,
-    },
-    {
-      'id': 3,
-      'name': 'Honda Vario',
-      'type': 'Motorcycle',
-      'price': '60000',
-      'status': 'Maintenance',
-      'rating': 4.7,
-      'order': 156,
-    },
-    {
-      'id': 4,
-      'name': 'Toyota Avanza',
-      'type': 'Car',
-      'price': '300000',
-      'status': 'Available',
-      'rating': 4.8,
-      'order': 78,
-    },
-    {
-      'id': 5,
-      'name': 'Honda Brio',
-      'type': 'Car',
-      'price': '250000',
-      'status': 'Rented',
-      'rating': 4.6,
-      'order': 45,
-    },
-    {
-      'id': 6,
-      'name': 'Daihatsu Xenia',
-      'type': 'Car',
-      'price': '200000',
-      'status': 'Rented',
-      'rating': 4.7,
-      'order': 50,
-    },
-    {
-      'id': 7,
-      'name': 'Suzuki Ertiga',
-      'type': 'Car',
-      'price': '320000',
-      'status': 'Available',
-      'rating': 4.8,
-      'order': 98,
-    },
-    {
-      'id': 8,
-      'name': 'Honda PCX',
-      'type': 'Motorcycle',
-      'price': '85000',
-      'status': 'Available',
-      'rating': 4.9,
-      'order': 44,
-    },
-    {
-      'id': 9,
-      'name': 'Yamaha NMAX',
-      'type': 'Motorcycle',
-      'price': '90000',
-      'status': 'Maintenance',
-      'rating': 4.8,
-      'order': 76,
-    },
-    {
-      'id': 10,
-      'name': 'Toyota Innova',
-      'type': 'Car',
-      'price': '400000',
-      'status': 'Maintenance',
-      'rating': 4.8,
-      'order': 114,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchVehicles();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchVehicles() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final token = await _secureStorage.read(key: 'jwt_token');
+
+      if (token == null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => AdmloginScreen()),
+          );
+        }
+        return;
+      }
+
+      List<Map<String, dynamic>> allVehicles = [];
+
+      // Fetch cars
+      final carsResponse = await http.get(
+        Uri.parse('https://api.intracrania.com/cars'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (carsResponse.statusCode == 200) {
+        final carsData = jsonDecode(carsResponse.body);
+        if (carsData['data'] != null) {
+          final carsList = List<Map<String, dynamic>>.from(carsData['data']);
+          // Add type field to each car
+          for (var car in carsList) {
+            car['type'] = 'Car';
+            car['name'] = '${car['brand']} ${car['model']}';
+            allVehicles.add(car);
+          }
+        }
+      } else if (carsResponse.statusCode == 401) {
+        _handleUnauthorized();
+        return;
+      }
+
+      // Fetch motorcycles
+      final motorcyclesResponse = await http.get(
+        Uri.parse('https://api.intracrania.com/motorcycles'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (motorcyclesResponse.statusCode == 200) {
+        final motorcyclesData = jsonDecode(motorcyclesResponse.body);
+        if (motorcyclesData['data'] != null) {
+          final motorcyclesList = List<Map<String, dynamic>>.from(
+            motorcyclesData['data'],
+          );
+          // Add type field to each motorcycle
+          for (var moto in motorcyclesList) {
+            moto['type'] = 'Motorcycle';
+            moto['name'] = '${moto['brand']} ${moto['model']}';
+            allVehicles.add(moto);
+          }
+        }
+      } else if (motorcyclesResponse.statusCode == 401) {
+        _handleUnauthorized();
+        return;
+      }
+
+      setState(() {
+        _vehicles = allVehicles;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error. Please check your connection.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleUnauthorized() async {
+    await _secureStorage.delete(key: 'jwt_token');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Session expired. Please login again.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => AdmloginScreen()),
+      );
+    }
   }
 
   List<Map<String, dynamic>> get _filteredVehicles {
@@ -148,10 +181,22 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
     }
   }
 
-  void _handleAddVehicle() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Add vehicle functionality not implemented.')),
+  String _formatPrice(int price) {
+    return price.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
     );
+  }
+
+  void _handleAddVehicle() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddVehicleScreen()),
+    );
+
+    if (result == true) {
+      _fetchVehicles();
+    }
   }
 
   void _handleViewDetail(Map<String, dynamic> vehicle) {
@@ -159,7 +204,61 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(vehicle['name']),
-        content: Text('Vehicle detail will be displayed here.'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Add vehicle image to the dialog with caching
+              if (vehicle['image_url'] != null)
+                Container(
+                  height: 180,
+                  width: double.infinity,
+                  margin: EdgeInsets.only(bottom: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: vehicle['image_url'],
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[100],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          vehicle['type'] == 'Car'
+                              ? Icons.directions_car
+                              : Icons.motorcycle,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              Text('Registration: ${vehicle['registration_num']}'),
+              SizedBox(height: 8),
+              Text('Brand: ${vehicle['brand']}'),
+              SizedBox(height: 8),
+              Text('Model: ${vehicle['model']}'),
+              SizedBox(height: 8),
+              Text('Year: ${vehicle['year']}'),
+              SizedBox(height: 8),
+              Text('Type: ${vehicle['type']}'),
+              SizedBox(height: 8),
+              Text('Price/Day: Rp ${_formatPrice(vehicle['price_per_day'])}'),
+              SizedBox(height: 8),
+              Text('Status: ${vehicle['status']}'),
+              // Replace the spread operator with this approach
+              _buildDescriptionSection(vehicle),
+            ],
+          ),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
@@ -171,20 +270,47 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
     );
   }
 
-  void _handleEditVehicle(Map<String, dynamic> vehicle) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit vehicle functionality not implemented.')),
-    );
+  // Add this helper method to build the description section
+  Widget _buildDescriptionSection(Map<String, dynamic> vehicle) {
+    if (vehicle['description'] != null &&
+        vehicle['description'].toString().isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 8),
+          Text('Description:'),
+          SizedBox(height: 4),
+          Text(
+            vehicle['description'],
+            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+          ),
+        ],
+      );
+    }
+    return SizedBox.shrink(); // Return an empty widget if there's no description
   }
 
+  void _handleEditVehicle(Map<String, dynamic> vehicle) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditVehicleScreen(vehicle: vehicle),
+      ),
+    ).then((result) {
+      // If result is true, refresh the vehicle list
+      if (result == true) {
+        _fetchVehicles();
+      }
+    });
+  }
+
+  // Updated delete functionality
   void _handleDeleteVehicle(Map<String, dynamic> vehicle) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete Vehicle'),
-        content: Text(
-          'Are you sure you want to delete vehicle ${vehicle['name']}?',
-        ),
+        content: Text('Are you sure you want to delete ${vehicle['name']}?'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         actions: [
           TextButton(
@@ -194,9 +320,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Vehicle ${vehicle['name']} deleted.')),
-              );
+              _deleteVehicle(vehicle);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Delete'),
@@ -204,6 +328,64 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
         ],
       ),
     );
+  }
+
+  // New method to handle the actual deletion
+  Future<void> _deleteVehicle(Map<String, dynamic> vehicle) async {
+    try {
+      final token = await _secureStorage.read(key: 'jwt_token');
+
+      if (token == null) {
+        _handleUnauthorized();
+        return;
+      }
+
+      // Determine the correct endpoint based on vehicle type
+      final endpoint = vehicle['type'] == 'Car'
+          ? 'https://api.intracrania.com/cars/delete/${vehicle['id']}'
+          : 'https://api.intracrania.com/motorcycles/delete/${vehicle['id']}';
+
+      final response = await http.delete(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${vehicle['type']} deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh the vehicle list
+          _fetchVehicles();
+        }
+      } else if (response.statusCode == 401) {
+        _handleUnauthorized();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete ${vehicle['type']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Network error. Please check your connection.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -222,7 +404,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF059669), Color(0xFF0D9488)],
@@ -235,27 +417,31 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Vehicle Management',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Vehicle Management',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '${_vehicles.length} Vehicles',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFD1FAE5),
+                            SizedBox(height: 4),
+                            Text(
+                              '${_vehicles.length} Vehicles',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFFD1FAE5),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      SizedBox(width: 8),
                       GestureDetector(
                         onTap: _handleAddVehicle,
                         child: Container(
@@ -266,7 +452,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white,
+                                color: Colors.black.withOpacity(0.1),
                                 blurRadius: 8,
                                 offset: Offset(0, 2),
                               ),
@@ -281,9 +467,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                       ),
                     ],
                   ),
-
                   SizedBox(height: 16),
-
                   TextField(
                     controller: _searchController,
                     onChanged: (value) => setState(() {}),
@@ -307,9 +491,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                       contentPadding: EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-
                   SizedBox(height: 12),
-
                   Row(
                     children: [
                       _buildStatMini(
@@ -318,16 +500,16 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                         Colors.blue,
                       ),
                       SizedBox(width: 8),
-                      _buildStatMini('$rentedCount', 'Available', Colors.green),
+                      _buildStatMini(
+                        '$availableCount',
+                        'Available',
+                        Colors.green,
+                      ),
+                      SizedBox(width: 8),
+                      _buildStatMini('$rentedCount', 'Rented', Colors.orange),
                       SizedBox(width: 8),
                       _buildStatMini(
                         '$maintenanceCount',
-                        'Rented',
-                        Colors.orange,
-                      ),
-                      SizedBox(width: 8),
-                      _buildStatMini(
-                        '$availableCount',
                         'Maintenance',
                         Colors.red,
                       ),
@@ -336,9 +518,8 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                 ],
               ),
             ),
-
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(
@@ -355,16 +536,50 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                 ],
               ),
             ),
-
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.all(20),
-                itemCount: _filteredVehicles.length,
-                itemBuilder: (context, index) {
-                  final vehicle = _filteredVehicles[index];
-                  return _buildVehicleCard(vehicle);
-                },
-              ),
+              child: _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF059669),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      color: Color(0xFF059669),
+                      onRefresh: _fetchVehicles,
+                      child: _filteredVehicles.isEmpty
+                          ? ListView(
+                              children: [
+                                SizedBox(height: 100),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.inbox_outlined,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        'No vehicles found',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.all(16),
+                              itemCount: _filteredVehicles.length,
+                              itemBuilder: (context, index) {
+                                final vehicle = _filteredVehicles[index];
+                                return _buildVehicleCard(vehicle);
+                              },
+                            ),
+                    ),
             ),
           ],
         ),
@@ -386,7 +601,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
             Text(
               value,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -394,7 +609,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
             SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(fontSize: 10, color: Color(0xFFD1FAE5)),
+              style: TextStyle(fontSize: 9, color: Color(0xFFD1FAE5)),
             ),
           ],
         ),
@@ -414,9 +629,12 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
           padding: EdgeInsets.symmetric(vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
         ),
       ),
     );
@@ -424,10 +642,12 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
 
   Widget _buildVehicleCard(Map<String, dynamic> vehicle) {
     final statusConfig = _getStatusConfig(vehicle['status']);
+    final isCar = vehicle['type'] == 'Car';
+    final vehicleImage = vehicle['image_url'];
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.grey[200]!, width: 2),
@@ -442,12 +662,54 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       ),
       child: Column(
         children: [
+          // Vehicle image section with caching
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey[100],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: vehicleImage != null
+                  ? CachedNetworkImage(
+                      imageUrl: vehicleImage,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[100],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          isCar ? Icons.directions_car : Icons.motorcycle,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: Colors.grey[200],
+                      child: Icon(
+                        isCar ? Icons.directions_car : Icons.motorcycle,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+            ),
+          ),
+          SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -462,7 +724,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                     vehicle['type'] == 'Motorcycle'
                         ? Icons.two_wheeler
                         : Icons.directions_car,
-                    size: 28,
+                    size: 24,
                     color: Color(0xFF059669),
                   ),
                 ),
@@ -475,39 +737,21 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                     Text(
                       vehicle['name'],
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1A1A1A),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      vehicle['type'],
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          '${vehicle['rating']}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          ' (${vehicle['order']})',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
+                      '${vehicle['type']} • ${vehicle['year']}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ),
+              SizedBox(width: 8),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -517,7 +761,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
                 child: Text(
                   statusConfig['label'],
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                     color: statusConfig['color'],
                   ),
@@ -525,9 +769,7 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
               ),
             ],
           ),
-
-          SizedBox(height: 12),
-
+          SizedBox(height: 10),
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -538,27 +780,25 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
               children: [
                 Text(
                   'Price',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
                 ),
                 Spacer(),
                 Text(
-                  'Rp ${vehicle['price'].toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                  'Rp ${_formatPrice(vehicle['price_per_day'])}',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF059669),
                   ),
                 ),
                 Text(
                   ' /day',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[500]),
                 ),
               ],
             ),
           ),
-
-          SizedBox(height: 12),
-
+          SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -610,12 +850,12 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
           padding: EdgeInsets.symmetric(vertical: 8),
           child: Column(
             children: [
-              Icon(icon, size: 16, color: color),
+              Icon(icon, size: 14, color: color),
               SizedBox(height: 2),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
@@ -642,14 +882,14 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(Icons.dashboard, 'Dashboard', 0),
               _buildNavItem(Icons.shopping_bag, 'Orders', 1),
               _buildNavItem(Icons.directions_car, 'Vehicles', 2),
-              _buildNavItem(Icons.people, 'Profile', 3),
+              _buildNavItem(Icons.person, 'Profile', 3),
             ],
           ),
         ),
@@ -659,52 +899,53 @@ class _VehicleManagementScreenState extends State<VehicleManagementScreen> {
 
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = _selectedBottomNavIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedBottomNavIndex = index;
-
+    return Flexible(
+      child: GestureDetector(
+        onTap: () {
           if (index == 0) {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
             );
-          }
-
-          if (index == 1) {
-            Navigator.push(
+          } else if (index == 1) {
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => OrderManagementScreen()),
             );
-          }
-
-          if (index == 3) {
-            Navigator.push(
+          } else if (index == 3) {
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => AdminProfileScreen()),
             );
           }
-        });
-      },
-
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isSelected ? Color(0xFF059669) : Colors.grey[400],
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: isSelected ? Color(0xFF059669) : Colors.grey[400],
+              ),
+              SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isSelected ? Color(0xFF059669) : Colors.grey[400],
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isSelected ? Color(0xFF059669) : Colors.grey[400],
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

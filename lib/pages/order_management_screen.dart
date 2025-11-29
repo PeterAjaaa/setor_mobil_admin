@@ -6,6 +6,7 @@ import 'package:setor_mobil_admin/auth/admlogin_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_dashboard_screen.dart';
 import 'package:setor_mobil_admin/pages/admin_profile_screen.dart';
 import 'package:setor_mobil_admin/pages/vehicle_management.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -214,6 +215,21 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     return 'Unknown';
   }
 
+  String? _getVehicleImage(Map<String, dynamic> order) {
+    if (order['car_id'] != null) {
+      final car = _cars[order['car_id']];
+      if (car != null && car['image_url'] != null) {
+        return car['image_url'];
+      }
+    } else if (order['motorcycle_id'] != null) {
+      final motorcycle = _motorcycles[order['motorcycle_id']];
+      if (motorcycle != null && motorcycle['image_url'] != null) {
+        return motorcycle['image_url'];
+      }
+    }
+    return null;
+  }
+
   Map<String, dynamic> _getStatusConfig(String status) {
     switch (status) {
       case 'Active':
@@ -266,6 +282,38 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Add vehicle image to the dialog with caching
+              if (_getVehicleImage(order) != null)
+                Container(
+                  height: 180,
+                  width: double.infinity,
+                  margin: EdgeInsets.only(bottom: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: _getVehicleImage(order)!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[100],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          _getVehicleType(order) == 'Car'
+                              ? Icons.directions_car
+                              : Icons.motorcycle,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Text('Order ID: ${order['id']}'),
               SizedBox(height: 8),
               Text('User ID: ${order['user_id']}'),
@@ -613,6 +661,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final statusConfig = _getStatusConfig(order['status']);
     final isVehicleCar = order['car_id'] != null;
+    final vehicleImage = _getVehicleImage(order);
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
@@ -658,6 +707,50 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 12),
+          // Vehicle image section with caching
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey[100],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: vehicleImage != null
+                  ? CachedNetworkImage(
+                      imageUrl: vehicleImage,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey[100],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          isVehicleCar
+                              ? Icons.directions_car
+                              : Icons.motorcycle,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: Colors.grey[200],
+                      child: Icon(
+                        isVehicleCar ? Icons.directions_car : Icons.motorcycle,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+            ),
           ),
           SizedBox(height: 12),
           Container(
