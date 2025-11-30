@@ -135,7 +135,7 @@ class _AdmloginScreenState extends State<AdmloginScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Network error. Please check your connection.'),
+              content: Text('Network error: $e'),
               backgroundColor: Colors.red,
             ),
           );
