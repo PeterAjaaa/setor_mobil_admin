@@ -394,6 +394,54 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
   }
 
+  Future<void> _updateVehicleStatus(
+    int vehicleId,
+    String vehicleType,
+    String status,
+  ) async {
+    try {
+      final token = await _secureStorage.read(key: 'jwt_token');
+
+      if (token == null) {
+        _handleUnauthorized();
+        return;
+      }
+
+      final endpoint = vehicleType == 'Car'
+          ? 'https://api.intracrania.com/cars/update/$vehicleId'
+          : 'https://api.intracrania.com/motorcycles/update/$vehicleId';
+
+      final response = await http.put(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'status': status}),
+      );
+
+      if (response.statusCode != 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update vehicle status'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating vehicle status'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _handleApproveOrder(Map<String, dynamic> order) {
     showDialog(
       context: context,
@@ -440,6 +488,60 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleCompleteOrder(Map<String, dynamic> order) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Complete Order'),
+        content: Text(
+          'Are you sure you want to complete order #${order['id']}? This will mark the vehicle as available.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              // Update order status to Completed
+              await _updateOrderStatus(order['id'], 'Completed');
+
+              // Update vehicle status to Available
+              if (order['car_id'] != null) {
+                await _updateVehicleStatus(order['car_id'], 'Car', 'Available');
+              } else if (order['motorcycle_id'] != null) {
+                await _updateVehicleStatus(
+                  order['motorcycle_id'],
+                  'Motorcycle',
+                  'Available',
+                );
+              }
+
+              // Refresh data to show updated status
+              await _fetchAllData();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Order #${order['id']} completed and vehicle marked as available',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: Text('Complete'),
           ),
         ],
       ),
@@ -860,6 +962,28 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               Icons.cancel_outlined,
               Colors.red,
               () => _handleRejectOrder(order),
+            ),
+          ),
+        ],
+      );
+    } else if (order['status'] == 'Active') {
+      return Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              'Detail',
+              Icons.visibility_outlined,
+              Colors.blue,
+              () => _handleViewDetail(order),
+            ),
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: _buildActionButton(
+              'Complete',
+              Icons.task_alt_outlined,
+              Colors.purple,
+              () => _handleCompleteOrder(order),
             ),
           ),
         ],
